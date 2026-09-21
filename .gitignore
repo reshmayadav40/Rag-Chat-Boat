@@ -1,0 +1,7 @@
+venv/
+__pycache__/
+*.pyc
+backend/app/.env
+backend/chroma_db/
+frontend/node_modules/
+frontend/dist/

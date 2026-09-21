@@ -1,18 +1,28 @@
-from sentence_transformers import SentenceTransformer
+import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+from openai import OpenAI
 
 
-MODEL_NAME = "all-MiniLM-L6-v2"
+APP_DIR = Path(__file__).resolve().parents[1]
+load_dotenv(APP_DIR / ".env")
 
-_model: SentenceTransformer | None = None
+MODEL_NAME = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+_client: OpenAI | None = None
 
 
-def _get_model() -> SentenceTransformer:
-	global _model
+def _get_client() -> OpenAI:
+	global _client
 
-	if _model is None:
-		_model = SentenceTransformer(MODEL_NAME)
+	if _client is None:
+		api_key = os.getenv("OPENAI_API_KEY")
+		base_url = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+		if not api_key:
+			raise RuntimeError("OPENAI_API_KEY is required for embeddings")
+		_client = OpenAI(api_key=api_key, base_url=base_url)
 
-	return _model
+	return _client
 
 
 def embed_texts(texts: list[str]) -> list[list[float]]:
@@ -20,8 +30,8 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
 	if not texts:
 		return []
 
-	embeddings = _get_model().encode(texts, convert_to_numpy=True)
-	return embeddings.tolist()
+	response = _get_client().embeddings.create(model=MODEL_NAME, input=texts)
+	return [item.embedding for item in response.data]
 
 
 def embed_text(text: str) -> list[float]:

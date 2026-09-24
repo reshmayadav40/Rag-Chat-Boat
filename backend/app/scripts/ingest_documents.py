@@ -3,7 +3,7 @@ from pathlib import Path
 import chromadb
 
 from app.ingestion.chunker import chunk_documents
-from app.ingestion.embedder import embed_texts
+from app.ingestion.embedder import MODEL_NAME, embed_texts
 from app.ingestion.pdf_loader import load_pdf
 
 
@@ -25,7 +25,18 @@ def get_collection() -> chromadb.Collection:
 
 	CHROMA_DIR.mkdir(parents=True, exist_ok=True)
 	client = chromadb.PersistentClient(path=str(CHROMA_DIR))
-	return client.get_or_create_collection(name=COLLECTION_NAME)
+	collection = client.get_or_create_collection(name=COLLECTION_NAME)
+	if collection.count() > 0:
+		sample = collection.get(limit=1, include=["embeddings"])
+		embeddings = sample.get("embeddings")
+		if embeddings is not None and len(embeddings) > 0 and len(embeddings[0]) != len(embed_texts(["embedding dimension check"])[0]):
+			print(
+				f"Embedding model changed to {MODEL_NAME}; rebuilding {COLLECTION_NAME}."
+			)
+			client.delete_collection(COLLECTION_NAME)
+			collection = client.create_collection(name=COLLECTION_NAME)
+
+	return collection
 
 
 def ingest_pdf(collection: chromadb.Collection, pdf_path: Path) -> tuple[int, int]:

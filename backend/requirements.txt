@@ -1,7 +1,6 @@
 ﻿chromadb==1.5.9
 fastapi==0.141.1
-openai==3.16.2
+google-genai==1.41.0
 pypdf==6.19.0
 python-dotenv==1.2.3
-reportlab==5.0.1
 uvicorn==0.53.0

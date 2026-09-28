@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
-from openai import OpenAI
+from google import genai
 
 
 FALLBACK_ANSWER = "I couldn't find this information in the provided documents."
@@ -35,42 +35,32 @@ def _build_context(retrieved_documents: list[dict]) -> str:
 	return "\n\n".join(context_parts)
 
 
-def _call_openai_compatible_provider(question: str, context: str) -> str:
-	api_key = os.getenv("OPENAI_API_KEY")
-	model = os.getenv("OPENAI_MODEL")
-	base_url = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/")
+def _call_gemini_provider(question: str, context: str) -> str:
+	api_key = os.getenv("GEMINI_API_KEY")
+	model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
 
 	missing = [
 		name
-		for name, value in (("OPENAI_API_KEY", api_key), ("OPENAI_MODEL", model))
+		for name, value in (("GEMINI_API_KEY", api_key), ("GEMINI_MODEL", model))
 		if not value
 	]
 	if missing:
 		names = ", ".join(missing)
 		raise LLMConfigurationError(
 			f"Missing LLM configuration: {names}. "
-			"Set these variables in backend/app/.env."
+			"Set these variables in backend/app/.env or Render environment variables."
 		)
 
 	try:
-		client = OpenAI(api_key=api_key, base_url=base_url)
-		response = client.chat.completions.create(
+		client = genai.Client(api_key=api_key)
+		response = client.models.generate_content(
 			model=model,
-			messages=[
-				{"role": "system", "content": SYSTEM_PROMPT},
-				{
-					"role": "user",
-					"content": f"Context:\n{context}\n\nQuestion:\n{question}",
-				},
-			],
+			contents=f"{SYSTEM_PROMPT}\n\nContext:\n{context}\n\nQuestion:\n{question}",
 		)
 	except Exception as error:
 		raise RuntimeError(f"LLM provider request failed: {error}") from error
 
-	try:
-		answer = response.choices[0].message.content.strip()
-	except (KeyError, IndexError, TypeError, AttributeError) as error:
-		raise RuntimeError("LLM provider returned an unexpected response format") from error
+	answer = (response.text or "").strip()
 
 	if not answer:
 		raise RuntimeError("LLM provider returned an empty answer")
@@ -87,4 +77,4 @@ def generate_answer(question: str, retrieved_documents: list[dict]) -> str:
 		raise ValueError("Retrieved documents cannot be empty")
 
 	context = _build_context(retrieved_documents)
-	return _call_openai_compatible_provider(question.strip(), context)
+	return _call_gemini_provider(question.strip(), context)

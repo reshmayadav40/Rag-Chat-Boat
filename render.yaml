@@ -22,4 +22,4 @@ services:
     staticPublishPath: dist
     envVars:
       - key: VITE_API_URL
-        value: https://rag-chat-boat.onrender.com
+        value: https://rag-chat-boat-1.onrender.com

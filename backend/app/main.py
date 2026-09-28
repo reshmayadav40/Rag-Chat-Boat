@@ -10,7 +10,11 @@ app = FastAPI(title="RAG Chatbot API")
 
 frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173").rstrip("/")
 allowed_origins = [frontend_url]
-for development_origin in ("http://localhost:5173", "http://127.0.0.1:5173"):
+for development_origin in (
+	"http://localhost:5173",
+	"http://127.0.0.1:5173",
+	"https://rag-chat-boat-2.onrender.com",
+):
 	if development_origin not in allowed_origins:
 		allowed_origins.append(development_origin)
 

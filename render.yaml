@@ -13,7 +13,7 @@ services:
       - key: GEMINI_EMBEDDING_MODEL
         value: gemini-embedding-001
       - key: FRONTEND_URL
-        value: https://rag-chatbot-frontend.onrender.com
+        value: https://rag-chat-boat-2.onrender.com
 
   - type: static
     name: rag-chatbot-frontend

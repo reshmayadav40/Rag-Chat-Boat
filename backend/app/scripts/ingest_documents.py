@@ -48,27 +48,28 @@ def ingest_pdf(collection: chromadb.Collection, pdf_path: Path) -> tuple[int, in
 		f"{chunk['metadata']['source']}-page-{chunk['metadata']['page']}-chunk-{index}"
 		for index, chunk in enumerate(chunks)
 	]
-	existing_ids = set(collection.get(ids=ids, include=[]).get("ids", []))
-	new_chunks = [
+	existing = collection.get(ids=ids, include=["documents"])
+	existing_documents = dict(zip(existing.get("ids", []), existing.get("documents", [])))
+	changed_chunks = [
 		(chunk_id, chunk)
 		for chunk_id, chunk in zip(ids, chunks)
-		if chunk_id not in existing_ids
+		if existing_documents.get(chunk_id) != chunk["text"]
 	]
 
-	new_embeddings = embed_texts([chunk["text"] for _, chunk in new_chunks])
-	if new_chunks:
-		collection.add(
-			ids=[chunk_id for chunk_id, _ in new_chunks],
-			documents=[chunk["text"] for _, chunk in new_chunks],
+	new_embeddings = embed_texts([chunk["text"] for _, chunk in changed_chunks])
+	if changed_chunks:
+		collection.upsert(
+			ids=[chunk_id for chunk_id, _ in changed_chunks],
+			documents=[chunk["text"] for _, chunk in changed_chunks],
 			embeddings=new_embeddings,
-			metadatas=[chunk["metadata"] for _, chunk in new_chunks],
+			metadatas=[chunk["metadata"] for _, chunk in changed_chunks],
 		)
 
 	print(f"Pages: {len(pages)}")
 	print(f"Chunks: {len(chunks)}")
 	print(f"Embeddings: {len(new_embeddings)}")
-	print(f"Stored: {len(new_chunks)}")
-	return len(chunks), len(new_chunks)
+	print(f"Stored: {len(changed_chunks)}")
+	return len(chunks), len(changed_chunks)
 
 
 def main() -> None:
